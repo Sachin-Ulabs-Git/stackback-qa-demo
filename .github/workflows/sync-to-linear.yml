@@ -1,0 +1,135 @@
+name: Sync GitHub Issue to Linear
+
+on:
+  issues:
+    types: [opened, edited]
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Parse issue and update Linear ticket
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issue = context.payload.issue;
+            const body = issue.body || '';
+
+            // ── Parse form fields from GitHub issue body ──────────────────
+            function getField(label) {
+              const regex = new RegExp(`### ${label}\\s*\\n+([^#]+?)(?=\\n###|$)`, 'i');
+              const match = body.match(regex);
+              return match ? match[1].trim() : null;
+            }
+
+            const errorType  = getField('Error Type');
+            const surface    = getField('Surface / Module') || getField('Surface / Screen');
+            const severity   = getField('Severity');
+            const store      = getField('Store Name');
+            const component  = getField('Component');
+            const device     = getField('Device');
+
+            // ── Extract clean label names ─────────────────────────────────
+            function cleanLabel(val) {
+              if (!val) return null;
+              return val.split('—')[0].split('(')[0].trim();
+            }
+
+            const errorTypeLabel = cleanLabel(errorType);
+            const surfaceLabel   = cleanLabel(surface);
+            const severityLabel  = cleanLabel(severity);
+
+            console.log('Parsed fields:');
+            console.log('  Error Type:', errorTypeLabel);
+            console.log('  Surface:', surfaceLabel);
+            console.log('  Severity:', severityLabel);
+            console.log('  Store:', store);
+
+            // ── Find the Linear ticket by GitHub issue number ─────────────
+            const linearKey = process.env.LINEAR_API_KEY;
+            const endpoint  = 'https://api.linear.app/graphql';
+
+            async function gql(query, variables = {}) {
+              const res = await fetch(endpoint, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': linearKey,
+                },
+                body: JSON.stringify({ query, variables }),
+              });
+              return (await res.json()).data;
+            }
+
+            // Get team + states + labels
+            const { teams } = await gql(`query { teams { nodes { id key } } }`);
+            const team = teams.nodes.find(t => t.key === 'TES');
+
+            const [statesData, labelsData] = await Promise.all([
+              gql(`query($id: ID!) {
+                workflowStates(filter: { team: { id: { eq: $id } } }) {
+                  nodes { id name }
+                }
+              }`, { id: team.id }),
+              gql(`query($id: ID!) {
+                issueLabels(filter: { team: { id: { eq: $id } } }) {
+                  nodes { id name }
+                }
+              }`, { id: team.id }),
+            ]);
+
+            const triageState = statesData.workflowStates.nodes.find(s => s.name === 'Triage');
+            const getLabel    = name => labelsData.issueLabels.nodes.find(l =>
+              l.name.toLowerCase() === name?.toLowerCase()
+            )?.id;
+
+            const labelIds = [
+              getLabel(surfaceLabel),
+              getLabel(errorTypeLabel),
+              getLabel(severityLabel),
+            ].filter(Boolean);
+
+            console.log('Label IDs found:', labelIds.length);
+
+            // Find the Linear issue linked to this GitHub issue
+            const { issues } = await gql(`
+              query($teamId: ID!) {
+                issues(filter: { team: { id: { eq: $teamId } } }) {
+                  nodes { id identifier title attachments { nodes { url } } }
+                }
+              }
+            `, { teamId: team.id });
+
+            const githubUrl = issue.html_url;
+            const linkedIssue = issues.nodes.find(i =>
+              i.attachments?.nodes?.some(a => a.url?.includes(githubUrl)) ||
+              i.title?.includes(issue.title?.substring(0, 30))
+            );
+
+            if (!linkedIssue) {
+              console.log('No linked Linear issue found yet — sync may have a delay');
+              return;
+            }
+
+            console.log('Found Linear issue:', linkedIssue.identifier);
+
+            // Update state to Triage + apply labels
+            await gql(`
+              mutation($id: String!, $input: IssueUpdateInput!) {
+                issueUpdate(id: $id, input: $input) {
+                  success
+                  issue { identifier state { name } }
+                }
+              }
+            `, {
+              id: linkedIssue.id,
+              input: {
+                stateId: triageState?.id,
+                labelIds: labelIds.length ? labelIds : undefined,
+              }
+            });
+
+            console.log(`✅ Updated ${linkedIssue.identifier} → Triage with ${labelIds.length} labels`);
+
+        env:
+          LINEAR_API_KEY: ${{ secrets.LINEAR_API_KEY }}
