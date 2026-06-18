@@ -5,8 +5,7 @@
 
 export function calculatePricingSummary(lineItems, discountCode) {
   const subtotal = lineItems.reduce((sum, item) => {
-    // BUG: Math.round removes decimal precision — should use toFixed(2)
-    return sum + Math.round(item.price * item.quantity);
+    return sum + parseFloat((item.price * item.quantity).toFixed(2));
   }, 0);
 
   const discount = discountCode ? applyDiscount(subtotal, discountCode) : 0;
