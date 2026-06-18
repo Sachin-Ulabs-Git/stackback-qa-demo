@@ -1,0 +1,102 @@
+name: "🐛 Functional / Module Issue"
+description: "Something is broken or behaving wrong — use this for code issues, calculation errors, failed actions."
+title: "[Error Type] What broke — Surface — Store"
+labels: []
+body:
+
+  - type: dropdown
+    id: error_type
+    attributes:
+      label: "Error Type"
+      description: "What kind of failure is this?"
+      options:
+        - "Purchase Error — checkout, cart, pricing, drawer flows"
+        - "Timeline Error — order summary, edit state, calculation"
+        - "Scheduler Error — delivery job timing, job running unexpectedly"
+        - "CX Module Error — CX Module or Settings affecting portal/widget"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: surface
+    attributes:
+      label: "Surface / Module"
+      description: "Where does this issue live?"
+      options:
+        - "Storefront Surface"
+        - "Portal Surface"
+        - "Landing Surface"
+        - "Order Module"
+        - "CX Module"
+        - "Selling Formats"
+        - "Customer Notification"
+        - "Admin Notification"
+        - "Settings & Config"
+        - "Onboarding"
+        - "Customer Module"
+        - "Integrations"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: "Severity"
+      description: "How badly does this impact users?"
+      options:
+        - "Critical — user-facing flow fully broken (checkout, payment, core action fails)"
+        - "High — significant feature broken, workaround exists"
+        - "Medium — noticeable issue, limited impact, workaround exists"
+        - "Low — cosmetic or minor UX gap, no functional impact"
+    validations:
+      required: true
+
+  - type: input
+    id: store
+    attributes:
+      label: "Store Name"
+      description: "Which store is affected?"
+      placeholder: "e.g. Everpure"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: plan
+    attributes:
+      label: "Plan Type"
+      options:
+        - "Prepaid"
+        - "PAYG"
+        - "Bundle"
+        - "Unknown / Multiple"
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: "What went wrong"
+      description: "In [Surface > Sub-module], while doing X, describe what went wrong and what you expected to happen."
+      placeholder: "In Portal Surface > Edit Drawer, while adding a freebie to an existing subscription on Everpure, the checkout link fired instead of saving the freebie..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: "Steps to Reproduce"
+      placeholder: |
+        1.
+        2.
+        3.
+    validations:
+      required: true
+
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: "Screenshots / Logs"
+      description: "Attach screenshots or paste any error logs here."
+      placeholder: "Drag and drop screenshots here..."
+    validations:
+      required: false
