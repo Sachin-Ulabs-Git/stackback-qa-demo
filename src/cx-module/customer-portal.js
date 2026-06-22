@@ -13,6 +13,7 @@ export class CustomerPortalConfig {
     const res = await fetch(`/api/cx/portal-config/${this.storeId}`);
     this.settings = await res.json();
     return this.settings;
+    
   }
 
   async save(updates) {

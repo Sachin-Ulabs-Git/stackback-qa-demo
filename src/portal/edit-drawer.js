@@ -1,6 +1,7 @@
 /**
  * Portal Surface — Edit Drawer
  * Handles subscription edits: swap product, add freebie, reschedule, change quantity.
+ * test
  */
 
 export class EditDrawer {
