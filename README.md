@@ -16,7 +16,7 @@ Branches follow the Linear auto-generated format:
 tes-XX-short-description
 ```
 
-## PR description format
+## PR description format is this
 
 Always include the closing keyword:
 ```
