@@ -28,13 +28,13 @@ body:
         - "Landing Surface"
         - "Order Module"
         - "CX Module"
-        - "Selling Formats"
-        - "Customer Notification"
-        - "Admin Notification"
+        - "Selling Formats / Purchase Options"
+        - "Customer Notification Module"
+        - "Admin Notification Module"
         - "Settings & Config"
         - "Onboarding"
         - "Customer Module"
-        - "Integrations"
+        - "Integrations Module"
     validations:
       required: true
 
