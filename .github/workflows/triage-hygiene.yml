@@ -1,0 +1,162 @@
+name: Triage Hygiene — Daily Stale Ticket Check
+
+on:
+  schedule:
+    - cron: '0 9 * * 1-5'  # 9am every weekday
+  workflow_dispatch:         # Allow manual trigger for testing
+
+jobs:
+  check-stale-triage:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check for stale and unlabelled tickets
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const apiKey   = process.env.LINEAR_API_KEY;
+            const endpoint = 'https://api.linear.app/graphql';
+
+            async function gql(query, variables = {}) {
+              const res = await fetch(endpoint, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': apiKey,
+                },
+                body: JSON.stringify({ query, variables }),
+              });
+              const json = await res.json();
+              if (json.errors) throw new Error(JSON.stringify(json.errors));
+              return json.data;
+            }
+
+            // Get team
+            const { teams } = await gql(`query { teams { nodes { id key name } } }`);
+            const team = teams.nodes.find(t => t.key === 'TES');
+
+            // Get Triage state
+            const { workflowStates } = await gql(`
+              query($teamId: ID!) {
+                workflowStates(filter: { team: { id: { eq: $teamId } } }) {
+                  nodes { id name }
+                }
+              }
+            `, { teamId: team.id });
+
+            const triageState = workflowStates.nodes.find(s => s.name === 'Triage');
+
+            // Get all issues in Triage
+            const { issues } = await gql(`
+              query($teamId: ID!, $stateId: ID!) {
+                issues(filter: {
+                  team: { id: { eq: $teamId } },
+                  state: { id: { eq: $stateId } }
+                }) {
+                  nodes {
+                    id
+                    identifier
+                    title
+                    createdAt
+                    labels { nodes { name } }
+                    url
+                  }
+                }
+              }
+            `, { teamId: team.id, stateId: triageState.id });
+
+            const now       = new Date();
+            const stale     = [];
+            const noLabels  = [];
+
+            for (const issue of issues.nodes) {
+              const created  = new Date(issue.createdAt);
+              const daysDiff = Math.floor((now - created) / (1000 * 60 * 60 * 24));
+              const labels   = issue.labels.nodes.map(l => l.name);
+
+              // Check stale (> 7 days)
+              if (daysDiff > 7) {
+                stale.push({ ...issue, daysDiff });
+              }
+
+              // Check missing required labels
+              const hasSurface  = labels.some(l =>
+                ['Storefront Surface','Portal Surface','Landing Surface',
+                 'Order Module','CX Module','Selling Formats / Purchase Options',
+                 'Customer Notification Module','Admin Notification Module',
+                 'Settings & Config','Onboarding','Customer Module','Integrations Module'
+                ].includes(l)
+              );
+              const hasErrType  = labels.some(l =>
+                ['Purchase Error','Timeline Error','Scheduler Error','CX Module Error','UI Feedback'].includes(l)
+              );
+              const hasSeverity = labels.some(l =>
+                ['Critical','High','Medium','Low'].includes(l)
+              );
+
+              if (!hasSurface || !hasErrType || !hasSeverity) {
+                noLabels.push({
+                  ...issue,
+                  missing: [
+                    !hasSurface  && 'Surface',
+                    !hasErrType  && 'Error Type',
+                    !hasSeverity && 'Severity',
+                  ].filter(Boolean),
+                });
+              }
+            }
+
+            // Build report
+            let report = `## 📋 Daily Triage Hygiene Report\n\n`;
+            report += `**Team:** ${team.name} · **Date:** ${now.toDateString()}\n\n`;
+
+            if (stale.length === 0 && noLabels.length === 0) {
+              report += `✅ **All clear!** No stale tickets and all tickets have the required labels.\n`;
+              console.log(report);
+              return;
+            }
+
+            if (stale.length > 0) {
+              report += `### ⏰ Stale tickets (in Triage > 7 days)\n\n`;
+              report += `These tickets have been sitting in Triage too long — action needed:\n\n`;
+              for (const issue of stale) {
+                report += `- **${issue.identifier}** — ${issue.title} _(${issue.daysDiff} days)_\n`;
+                report += `  ${issue.url}\n`;
+              }
+              report += `\n`;
+            }
+
+            if (noLabels.length > 0) {
+              report += `### 🏷️ Tickets missing required labels\n\n`;
+              report += `These tickets can't be tracked or filtered without all 3 labels:\n\n`;
+              for (const issue of noLabels) {
+                report += `- **${issue.identifier}** — ${issue.title}\n`;
+                report += `  Missing: ${issue.missing.join(', ')}\n`;
+                report += `  ${issue.url}\n`;
+              }
+            }
+
+            console.log(report);
+
+            // Post as a Linear comment on each stale ticket
+            for (const issue of stale) {
+              await gql(`
+                mutation($input: CommentCreateInput!) {
+                  commentCreate(input: $input) {
+                    success
+                  }
+                }
+              `, {
+                input: {
+                  issueId: issue.id,
+                  body: `⏰ **Triage hygiene alert:** This ticket has been in Triage for **${issue.daysDiff} days**.\n\nAction needed: either move to Confirmed (if a dev is picking it up), move to Backlog (if it's low priority and non-blocking), or close it if it's no longer valid.`,
+                }
+              });
+            }
+
+            // Fail the action if there are issues — makes it visible in GitHub
+            if (stale.length > 0 || noLabels.length > 0) {
+              core.setFailed(`Found ${stale.length} stale ticket(s) and ${noLabels.length} ticket(s) missing labels.`);
+            }
+
+        env:
+          LINEAR_API_KEY: ${{ secrets.LINEAR_API_KEY }}

@@ -1,0 +1,105 @@
+name: PR Guard — Require Linear ticket reference
+
+on:
+  pull_request:
+    types: [opened, edited, reopened]
+
+jobs:
+  check-linear-reference:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+
+    steps:
+      - name: Check for Linear ticket reference
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { data: pr } = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.payload.pull_request.number,
+            });
+
+            const body   = pr.body || '';
+            const title  = pr.title || '';
+            const combined = `${title}\n${body}`;
+
+            // Check for Closes/Fixes/Resolves + Linear ticket ID (e.g. TES-5)
+            const pattern = /\b(closes|fixes|resolves)\s+[A-Z]+-\d+/i;
+            const hasRef  = pattern.test(combined);
+
+            // Get existing bot comments
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.pull_request.number,
+            });
+
+            const botComment = comments.find(c =>
+              c.user.type === 'Bot' && c.body.includes('<!-- pr-guard -->')
+            );
+
+            if (hasRef) {
+              // Extract the ticket reference for confirmation
+              const match = combined.match(/\b(closes|fixes|resolves)\s+([A-Z]+-\d+)/i);
+              const ticketRef = match ? match[2].toUpperCase() : 'ticket';
+
+              const successMsg = `<!-- pr-guard -->
+            ## ✅ PR Guard — Linear ticket linked
+
+            Great — this PR is linked to **${ticketRef}**.
+
+            When this PR is merged, Linear will automatically move **${ticketRef}** to **Done**.`;
+
+              if (botComment) {
+                await github.rest.issues.updateComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  comment_id: botComment.id,
+                  body: successMsg,
+                });
+              } else {
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: context.payload.pull_request.number,
+                  body: successMsg,
+                });
+              }
+            } else {
+              const warningMsg = `<!-- pr-guard -->
+            ## ⚠️ PR Guard — Missing Linear ticket reference
+
+            This PR description doesn't include a Linear ticket reference.
+
+            **Add one of the following to your PR description:**
+            \`\`\`
+            Closes TES-XX
+            Fixes TES-XX
+            Resolves TES-XX
+            \`\`\`
+
+            **Why this matters:**
+            Without this, the Linear ticket won't auto-close when this PR is merged — someone will have to close it manually.
+
+            > Edit the PR description to add the reference, then this check will update automatically.`;
+
+              if (botComment) {
+                await github.rest.issues.updateComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  comment_id: botComment.id,
+                  body: warningMsg,
+                });
+              } else {
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: context.payload.pull_request.number,
+                  body: warningMsg,
+                });
+              }
+
+              core.setFailed('PR is missing a Linear ticket reference (Closes/Fixes/Resolves TES-XX)');
+            }

@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>StackBack — QA Automation Guide</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f8f7f4;--ink:#0f0f0e;--ink2:#3a3a38;--ink3:#7a7a76;--ink4:#c2c2bc;
+  --lime:#b8e000;--lime-d:#8aaa00;--lime-l:#e8f7a0;--lime-ll:#f4fbd0;
+  --card:#ffffff;--card2:#f0efe9;--border:#e2e1db;--border2:#ccccc4;
+  --red:#d63030;--red-l:#fdf0f0;--red-b:#f5c8c8;
+  --orange:#c85a00;--orange-l:#fdf5f0;--orange-b:#f5d8c0;
+  --green:#1a7a3a;--green-l:#f0faf4;--green-b:#b8e8cc;
+  --blue:#1a4fa0;--blue-l:#f0f4fd;--blue-b:#bcd0f5;
+  --purple:#6d28d9;--purple-l:#f5f0fd;--purple-b:#d0b8f5;
+  --amber:#b45309;--amber-l:#fef3e2;--amber-b:#fcd9a0;
+  --sans:'DM Sans',sans-serif;--mono:'DM Mono',monospace;--serif:'Instrument Serif',serif;
+  --r:8px;
+}
+html{scroll-behavior:smooth}
+body{background:var(--bg);font-family:var(--sans);color:var(--ink);font-size:15px;overflow-x:hidden}
+
+/* NAV */
+.nav{position:sticky;top:0;z-index:100;background:rgba(248,247,244,.94);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 32px;height:52px;gap:0}
+.nav-logo{font-family:var(--serif);font-size:17px;margin-right:auto;display:flex;align-items:center;gap:8px}
+.nav-logo .dot{width:8px;height:8px;background:var(--lime);border-radius:50%}
+.nav-tabs{display:flex;gap:2px}
+.nav-tab{padding:7px 16px;border-radius:6px;font-size:13px;font-weight:500;cursor:pointer;color:var(--ink3);background:none;border:none;font-family:var(--sans);transition:.15s}
+.nav-tab:hover{color:var(--ink);background:var(--card2)}
+.nav-tab.on{color:var(--ink);background:var(--lime);font-weight:600}
+.panel{display:none;animation:fade .25s ease both}
+.panel.on{display:block}
+@keyframes fade{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+.page{max-width:880px;margin:0 auto;padding:52px 32px 120px}
+
+/* HERO */
+.hero{margin-bottom:52px}
+.hero-tag{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:10px;font-weight:500;letter-spacing:2px;text-transform:uppercase;color:var(--lime-d);background:var(--lime-ll);border:1px solid var(--lime);padding:4px 12px;border-radius:20px;margin-bottom:18px}
+.hero h1{font-family:var(--serif);font-size:clamp(32px,5vw,52px);line-height:1.1;margin-bottom:14px;letter-spacing:-1px}
+.hero h1 em{font-style:italic;color:var(--lime-d)}
+.hero p{font-size:16px;color:var(--ink2);line-height:1.75;max-width:560px}
+
+/* SEC */
+.sec{margin-bottom:48px}
+.sec-label{font-family:var(--mono);font-size:10px;font-weight:500;letter-spacing:3px;text-transform:uppercase;color:var(--ink4);margin-bottom:20px;padding-bottom:10px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px}
+.sec-label::before{content:'';width:20px;height:1px;background:var(--ink4)}
+
+/* FLOW STRIP */
+.flow-strip{display:flex;background:var(--card);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin:16px 0}
+.flow-node{flex:1;padding:16px 10px;text-align:center;border-right:1px solid var(--border)}
+.flow-node:last-child{border-right:none}
+.fn-dot{width:9px;height:9px;border-radius:50%;margin:0 auto 8px;display:block}
+.fn-label{font-family:var(--mono);font-size:9px;color:var(--ink3);margin-bottom:4px;letter-spacing:.5px;text-transform:uppercase}
+.fn-val{font-size:13px;font-weight:700;color:var(--ink)}
+.fn-sub{font-size:11px;color:var(--ink3);margin-top:3px}
+
+/* STEPS */
+.steps{display:flex;flex-direction:column;gap:2px}
+.step{background:var(--card);border:1px solid var(--border);border-radius:var(--r);overflow:hidden}
+.step-head{display:flex;align-items:flex-start;gap:16px;padding:18px 22px;cursor:pointer;user-select:none}
+.step-num{width:32px;height:32px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:11px;font-weight:600;flex-shrink:0;margin-top:1px}
+.step-meta{flex:1}
+.step-role{font-family:var(--mono);font-size:10px;font-weight:500;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:4px}
+.step-title{font-size:15px;font-weight:600;line-height:1.3}
+.step-sub{font-size:13px;color:var(--ink3);margin-top:3px}
+.step-chevron{font-size:10px;color:var(--ink4);margin-top:7px;flex-shrink:0;font-family:var(--mono);transition:.15s}
+.step.open .step-chevron{color:var(--lime-d)}
+.step-body{display:none;padding:0 22px 20px;border-top:1px solid var(--border)}
+.step.open .step-body{display:block;padding-top:18px}
+
+/* INS */
+.ins{display:flex;gap:14px;margin-bottom:10px;padding:14px 16px;background:#f5f5f2;border-radius:6px;border:1px solid var(--border)}
+.ins-n{width:22px;height:22px;border-radius:50%;background:var(--ink);color:#fff;font-family:var(--mono);font-size:10px;font-weight:500;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+.ins-body{font-size:13px;color:var(--ink2);line-height:1.75;flex:1}
+.ins-body b{color:var(--ink);font-weight:600}
+.ins-body code{font-family:var(--mono);font-size:11px;background:var(--card);border:1px solid var(--border2);color:var(--blue);padding:1px 6px;border-radius:3px}
+
+/* CALLOUT */
+.callout{border-radius:var(--r);padding:14px 18px;margin:14px 0;border:1px solid;display:flex;gap:12px;align-items:flex-start}
+.callout-icon{font-size:16px;flex-shrink:0;margin-top:1px}
+.callout-body{font-size:13px;line-height:1.75;flex:1}
+.callout-body b{font-weight:600}
+.callout.warn{border-color:var(--orange-b);background:var(--orange-l);color:var(--orange)}
+.callout.ok{border-color:var(--green-b);background:var(--green-l);color:var(--green)}
+.callout.info{border-color:var(--blue-b);background:var(--blue-l);color:var(--blue)}
+.callout.lime{border-color:var(--lime);background:var(--lime-ll);color:var(--lime-d)}
+.callout.red{border-color:var(--red-b);background:var(--red-l);color:var(--red)}
+
+/* CODE */
+.code-block{font-family:var(--mono);font-size:12px;background:var(--ink);color:#e0e0d8;border-radius:var(--r);padding:18px 20px;margin:14px 0;line-height:1.85;overflow-x:auto}
+.c-comment{color:#7a9a6a}
+.c-key{color:#a8d8f0}
+.c-val{color:#b8e880}
+
+/* BADGE */
+.badge{display:inline-flex;align-items:center;font-family:var(--mono);font-size:10px;font-weight:500;padding:2px 8px;border-radius:4px;border:1px solid;vertical-align:middle;margin:1px}
+.b-green{color:var(--green);border-color:var(--green-b);background:var(--green-l)}
+.b-blue{color:var(--blue);border-color:var(--blue-b);background:var(--blue-l)}
+.b-red{color:var(--red);border-color:var(--red-b);background:var(--red-l)}
+.b-orange{color:var(--orange);border-color:var(--orange-b);background:var(--orange-l)}
+.b-amber{color:var(--amber);border-color:var(--amber-b);background:var(--amber-l)}
+.b-purple{color:var(--purple);border-color:var(--purple-b);background:var(--purple-l)}
+.b-grey{color:var(--ink3);border-color:var(--border2);background:#f5f5f2}
+.b-lime{color:var(--lime-d);border-color:var(--lime);background:var(--lime-ll)}
+
+/* TABLE */
+.tbl{width:100%;border-collapse:collapse;margin:14px 0;font-size:13px}
+.tbl th{background:var(--ink);color:#fff;padding:10px 14px;text-align:left;font-weight:600;font-size:11px;font-family:var(--mono);letter-spacing:.5px}
+.tbl th:first-child{border-radius:6px 0 0 0}
+.tbl th:last-child{border-radius:0 6px 0 0}
+.tbl td{padding:9px 14px;border-bottom:1px solid var(--border);color:var(--ink2);line-height:1.5;vertical-align:top}
+.tbl tr:last-child td{border-bottom:none}
+.tbl tr:nth-child(even) td{background:#f5f5f2}
+
+/* STAT ROW */
+.stat-row{display:flex;gap:12px;margin:16px 0;flex-wrap:wrap}
+.stat{flex:1;min-width:130px;background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:16px 18px;border-top:3px solid}
+.stat-num{font-family:var(--serif);font-size:28px;line-height:1;margin-bottom:4px}
+.stat-label{font-family:var(--mono);font-size:10px;color:var(--ink3);letter-spacing:1px;text-transform:uppercase}
+
+/* TWO COL */
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:14px 0}
+@media(max-width:600px){.two-col{grid-template-columns:1fr}}
+.col-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:16px 18px}
+.col-card h4{font-size:13px;font-weight:700;margin-bottom:8px}
+.col-card p{font-size:12px;color:var(--ink3);line-height:1.7}
+
+/* RULES */
+.rules{list-style:none;display:flex;flex-direction:column;gap:6px;margin:12px 0}
+.rules li{display:flex;gap:10px;align-items:flex-start;padding:10px 14px;background:var(--card);border:1px solid var(--border);border-radius:6px;font-size:13px;color:var(--ink2);line-height:1.6}
+.rules li .ri{font-size:14px;flex-shrink:0}
+.rules li b{color:var(--ink);font-weight:600}
+
+/* AUTO BADGE */
+.auto-chip{display:inline-flex;align-items:center;gap:4px;font-family:var(--mono);font-size:9px;font-weight:600;padding:2px 7px;border-radius:10px;background:var(--lime-ll);color:var(--lime-d);border:1px solid var(--lime);text-transform:uppercase;letter-spacing:.5px;margin-left:6px}
+.manual-chip{display:inline-flex;align-items:center;gap:4px;font-family:var(--mono);font-size:9px;font-weight:600;padding:2px 7px;border-radius:10px;background:var(--amber-l);color:var(--amber);border:1px solid var(--amber-b);text-transform:uppercase;letter-spacing:.5px;margin-left:6px}
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-logo"><span class="dot"></span> StackBack · QA Automation</div>
+  <div class="nav-tabs">
+    <button class="nav-tab on" onclick="show('overview',this)">Overview</button>
+    <button class="nav-tab" onclick="show('qa',this)">For QA</button>
+    <button class="nav-tab" onclick="show('dev',this)">For Dev</button>
+    <button class="nav-tab" onclick="show('rules',this)">Rules</button>
+  </div>
+</nav>
+
+<!-- ═══ OVERVIEW ═══ -->
+<div id="tab-overview" class="panel on">
+<div class="page">
+  <div class="hero">
+    <div class="hero-tag">StackBack · Linear · Automation Guide</div>
+    <h1>The QA flow —<br><em>fully automated</em></h1>
+    <p>How tickets move from being raised on GitHub to being closed in Linear — without anyone manually updating states, formatting titles, or applying labels.</p>
+  </div>
+
+  <div class="sec">
+    <div class="sec-label">The 5 states</div>
+    <div class="flow-strip">
+      <div class="flow-node">
+        <span class="fn-dot" style="background:#eb5757"></span>
+        <div class="fn-label">Entry — Auto</div>
+        <div class="fn-val">Triage</div>
+        <div class="fn-sub">All new tickets land here</div>
+      </div>
+      <div class="flow-node">
+        <span class="fn-dot" style="background:#6b7280"></span>
+        <div class="fn-label">Parked</div>
+        <div class="fn-val">Backlog</div>
+        <div class="fn-sub">Low priority / cosmetic</div>
+      </div>
+      <div class="flow-node">
+        <span class="fn-dot" style="background:#f2c94c"></span>
+        <div class="fn-label">Manual — Dev</div>
+        <div class="fn-val">Confirmed</div>
+        <div class="fn-sub">Dev claimed the ticket</div>
+      </div>
+      <div class="flow-node">
+        <span class="fn-dot" style="background:#1a4fa0"></span>
+        <div class="fn-label">Auto — PR open</div>
+        <div class="fn-val">In Review</div>
+        <div class="fn-sub">Fix is on GitHub</div>
+      </div>
+      <div class="flow-node">
+        <span class="fn-dot" style="background:#1a7a3a"></span>
+        <div class="fn-label">Auto — PR merge</div>
+        <div class="fn-val">Done</div>
+        <div class="fn-sub">Fix is live</div>
+      </div>
+    </div>
+    <div class="stat-row">
+      <div class="stat" style="border-top-color:var(--green)"><div class="stat-num">3</div><div class="stat-label">Auto transitions</div></div>
+      <div class="stat" style="border-top-color:var(--amber)"><div class="stat-num">1</div><div class="stat-label">Manual step</div></div>
+      <div class="stat" style="border-top-color:var(--blue)"><div class="stat-num">✓</div><div class="stat-label">GitHub synced</div></div>
+      <div class="stat" style="border-top-color:var(--lime)"><div class="stat-num">✓</div><div class="stat-label">PR Guard active</div></div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-label">End-to-end flow</div>
+    <table class="tbl">
+      <thead><tr><th>Step</th><th>Who</th><th>What happens</th><th>Type</th></tr></thead>
+      <tbody>
+        <tr><td>1. Raise issue on GitHub</td><td>QA / Designer / PM</td><td>Fill guided form → ticket created in Linear Triage with all labels</td><td><span class="badge b-lime">Auto</span></td></tr>
+        <tr><td>2. Move to Confirmed</td><td>Developer</td><td>Open Linear → move ticket to Confirmed → set Assignee to self</td><td><span class="badge b-amber">Manual</span></td></tr>
+        <tr><td>3. Fix the code</td><td>Developer</td><td>Create branch from Linear, fix bug, push to GitHub</td><td><span class="badge b-grey">Dev work</span></td></tr>
+        <tr><td>4. Open PR with Closes TES-XX</td><td>Developer</td><td>PR Guard checks the reference → Linear moves ticket to In Review</td><td><span class="badge b-lime">Auto</span></td></tr>
+        <tr><td>5. PR reviewed & merged</td><td>PM / Dev</td><td>Linear moves ticket to Done — no manual update needed</td><td><span class="badge b-lime">Auto</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="sec">
+    <div class="sec-label">Two types of work — kept separate</div>
+    <div class="two-col">
+      <div class="col-card">
+        <h4>🐛 Bug / QA Feedback</h4>
+        <p>Something broken in the existing app. Raise as a <b>GitHub Issue</b> using the Functional or UI template. Ticket goes into the <b>QA team</b> in Linear. Never inside a project.</p>
+      </div>
+      <div class="col-card">
+        <h4>🚀 New Features</h4>
+        <p>Work that doesn't exist yet. Lives inside one of the <b>active projects</b>: Try Before You Buy, WhatsApp Integration, or Master Admin. Same GitHub branch + PR convention applies.</p>
+      </div>
+    </div>
+    <div class="callout lime">
+      <div class="callout-icon">💡</div>
+      <div class="callout-body"><b>The one rule:</b> If it's broken → GitHub Issue → QA team. If it's being built → Project ticket. Never mix the two.</div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ═══ FOR QA ═══ -->
+<div id="tab-qa" class="panel">
+<div class="page">
+  <div class="hero">
+    <div class="hero-tag">StackBack · For QA / PM / Design</div>
+    <h1>How to raise<br>a <em>ticket</em></h1>
+    <p>You don't need a Linear account. You don't need to know the label names. Just go to GitHub, fill in the form, and submit. Everything else is automatic.</p>
+  </div>
+
+  <div class="sec">
+    <div class="sec-label">Step by step</div>
+    <div class="steps">
+
+      <div class="step open">
+        <div class="step-head" onclick="toggle(this)">
+          <div class="step-num" style="background:var(--lime-ll);color:var(--lime-d);border:1px solid var(--lime)">01</div>
+          <div class="step-meta">
+            <div class="step-role" style="color:var(--lime-d)">QA / PM / Designer</div>
+            <div class="step-title">Go to GitHub → New Issue</div>
+            <div class="step-sub">Open the StackBack repo and click New Issue</div>
+          </div>
+          <div class="step-chevron">▼</div>
+        </div>
+        <div class="step-body">
+          <div class="ins"><div class="ins-n">1</div><div class="ins-body">Go to: <code>github.com/Sachin-Ulabs-Git/stackback-qa-demo/issues/new/choose</code></div></div>
+          <div class="ins"><div class="ins-n">2</div><div class="ins-body">You'll see two options — pick the right one:<br><br>
+            <b>🐛 Functional / Module Issue</b> — something is broken or doing the wrong thing<br>
+            <b>🎨 UI / Design Issue</b> — something looks wrong or is misaligned
+          </div></div>
+          <div class="callout lime">
+            <div class="callout-icon">💡</div>
+            <div class="callout-body"><b>Blank issues are disabled.</b> You must use a template — this ensures every ticket has the right information for the developer.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-head" onclick="toggle(this)">
+          <div class="step-num" style="background:var(--lime-ll);color:var(--lime-d);border:1px solid var(--lime)">02</div>
+          <div class="step-meta">
+            <div class="step-role" style="color:var(--lime-d)">QA / PM / Designer</div>
+            <div class="step-title">Fill in the form</div>
+            <div class="step-sub">Dropdowns handle the labels — you just describe what's wrong</div>
+          </div>
+          <div class="step-chevron">▼</div>
+        </div>
+        <div class="step-body">
+          <div class="ins"><div class="ins-n">1</div><div class="ins-body"><b>Update the title</b> — replace the placeholder with the actual issue:<br><br>
+            Functional: <code>[Purchase Error] Pricing shows $12 not $12.49 — Storefront Surface — Everpure</code><br>
+            UI: <code>[UI Feedback] Widget selector text clipped on mobile — Storefront Surface — Mobile</code>
+          </div></div>
+          <div class="ins"><div class="ins-n">2</div><div class="ins-body"><b>Fill the dropdowns</b> — Error Type, Surface, Severity, Store. These become Linear labels automatically. You don't need to know Linear label names.</div></div>
+          <div class="ins"><div class="ins-n">3</div><div class="ins-body"><b>Describe what went wrong</b> — write it naturally. Include steps to reproduce and attach screenshots. The more detail, the faster the dev can fix it.</div></div>
+          <div class="callout ok">
+            <div class="callout-icon">✅</div>
+            <div class="callout-body"><b>Good description:</b> "In Portal Surface > Edit Drawer, while adding a freebie and swapping a product at the same time, the checkout link fired before the freebie was saved. Expected: save completes first. Steps: 1. Open edit drawer 2. Swap product 3. Add freebie 4. Click save."</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-head" onclick="toggle(this)">
+          <div class="step-num" style="background:var(--lime-ll);color:var(--lime-d);border:1px solid var(--lime)">03</div>
+          <div class="step-meta">
+            <div class="step-role" style="color:var(--lime-d)">Automatic</div>
+            <div class="step-title">Ticket appears in Linear <span class="auto-chip">● Auto</span></div>
+            <div class="step-sub">Within 30 seconds — no action needed from you</div>
+          </div>
+          <div class="step-chevron">▼</div>
+        </div>
+        <div class="step-body">
+          <div class="ins"><div class="ins-n">1</div><div class="ins-body">A GitHub Action runs automatically and creates the ticket in Linear.</div></div>
+          <div class="ins"><div class="ins-n">2</div><div class="ins-body">The ticket lands in <b>Triage</b> with all 3 labels already applied: surface label + error type label + severity label.</div></div>
+          <div class="ins"><div class="ins-n">3</div><div class="ins-body">You'll see a link to the Linear ticket in the GitHub issue. That's it — your job is done. The dev will pick it up from Triage.</div></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-label">Severity — how to pick the right one</div>
+    <table class="tbl">
+      <thead><tr><th>Severity</th><th>When to use</th><th>Examples</th></tr></thead>
+      <tbody>
+        <tr><td><span class="badge b-red">Critical</span></td><td>Checkout, payment, or core user action is completely broken. Fix immediately.</td><td>Cart not loading, payment failing, subscription can't be created</td></tr>
+        <tr><td><span class="badge b-orange">High</span></td><td>Significant feature broken or degraded. Workaround exists but it's painful. A client has called about it.</td><td>Pricing shows wrong values, edit drawer not saving</td></tr>
+        <tr><td><span class="badge b-amber">Medium</span></td><td>Noticeable issue, limited user impact. No client complaint. Workaround exists.</td><td>Order summary stale, portal settings not updating live</td></tr>
+        <tr><td><span class="badge b-grey">Low</span></td><td>Cosmetic or minor UX gap. No functional impact. Spotted internally.</td><td>Button padding off, text clipped on rare screen size</td></tr>
+      </tbody>
+    </table>
+    <div class="callout lime">
+      <div class="callout-icon">💡</div>
+      <div class="callout-body"><b>Quick rule:</b> Client called or messaged about it → at least <b>High</b>. Checkout or payments involved → <b>Critical</b>. Spotted it yourself and it looks minor → <b>Medium or Low</b>.</div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-label">When to use Backlog instead of Triage</div>
+    <div class="callout info">
+      <div class="callout-icon">📥</div>
+      <div class="callout-body"><b>QA owns the Backlog decision.</b> Move a ticket to Backlog only if all three apply: <b>(1)</b> cosmetic or non-blocking — no user flow is broken; <b>(2)</b> no customer has reported it; <b>(3)</b> does not affect checkout, payments, or scheduling. If in doubt, leave it in Triage for the PM to decide.</div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ═══ FOR DEV ═══ -->
+<div id="tab-dev" class="panel">
+<div class="page">
+  <div class="hero">
+    <div class="hero-tag">StackBack · For Developers</div>
+    <h1>Pick up a ticket<br>and <em>close it</em></h1>
+    <p>From seeing a ticket in Triage to watching it close itself on merge. Two clicks in Linear, the rest is git and GitHub.</p>
+  </div>
+
+  <div class="sec">
+    <div class="sec-label">The full cycle</div>
+    <div class="steps">
+
+      <div class="step open">
+        <div class="step-head" onclick="toggle(this)">
+          <div class="step-num" style="background:var(--lime-ll);color:var(--lime-d);border:1px solid var(--lime)">01</div>
+          <div class="step-meta">
+            <div class="step-role" style="color:var(--lime-d)">Dev · Linear · 30 seconds</div>
+            <div class="step-title">Claim the ticket <span class="manual-chip">● Manual</span></div>
+            <div class="step-sub">The only thing you do in Linear</div>
+          </div>
+          <div class="step-chevron">▼</div>
+        </div>
+        <div class="step-body">
+          <div class="ins"><div class="ins-n">1</div><div class="ins-body">Open Linear → StackBack QA → Triage. Find your ticket. Read the full description — surface, error type, steps to reproduce, screenshots.</div></div>
+          <div class="ins"><div class="ins-n">2</div><div class="ins-body">Move the ticket to <b>Confirmed</b>. This is the only manual state change in the entire flow.</div></div>
+          <div class="ins"><div class="ins-n">3</div><div class="ins-body">Set yourself as <b>Assignee</b>. This is how the PM tracks who is working on what.</div></div>
+          <div class="ins"><div class="ins-n">4</div><div class="ins-body">In the ticket sidebar → <b>Development</b> → click <b>Copy git branch name</b>. You'll get something like: <code>tes-8-checkout-link-fires-before-freebie-saves</code></div></div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-head" onclick="toggle(this)">
+          <div class="step-num" style="background:var(--lime-ll);color:var(--lime-d);border:1px solid var(--lime)">02</div>
+          <div class="step-meta">
+            <div class="step-role" style="color:var(--lime-d)">Dev · Terminal</div>
+            <div class="step-title">Create the branch and fix the code</div>
+            <div class="step-sub">Always branch off main — never work on main directly</div>
+          </div>
+          <div class="step-chevron">▼</div>
+        </div>
+        <div class="step-body">
+          <div class="ins"><div class="ins-n">1</div><div class="ins-body">Pull latest main and create your branch:</div></div>
+          <div class="code-block">
+<span class="c-comment"># Get the latest code</span>
+git checkout main
+git pull origin main
+
+<span class="c-comment"># Create branch using the name from Linear</span>
+git checkout -b tes-8-checkout-link-fires-before-freebie-saves
+          </div>
+          <div class="ins"><div class="ins-n">2</div><div class="ins-body">Make your fix. Test locally. Then commit and push:</div></div>
+          <div class="code-block">
+git add .
+git commit -m <span class="c-val">"fix: save freebie before generating checkout link — Closes TES-8"</span>
+git push -u origin tes-8-checkout-link-fires-before-freebie-saves
+          </div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-head" onclick="toggle(this)">
+          <div class="step-num" style="background:var(--lime-ll);color:var(--lime-d);border:1px solid var(--lime)">03</div>
+          <div class="step-meta">
+            <div class="step-role" style="color:var(--lime-d)">Dev · GitHub</div>
+            <div class="step-title">Open the Pull Request</div>
+            <div class="step-sub">One rule: include Closes TES-XX in the description</div>
+          </div>
+          <div class="step-chevron">▼</div>
+        </div>
+        <div class="step-body">
+          <div class="ins"><div class="ins-n">1</div><div class="ins-body">Go to the GitHub repo. Click <b>Compare & pull request</b> on the yellow banner (or Pull Requests → New).</div></div>
+          <div class="ins"><div class="ins-n">2</div><div class="ins-body">Set <b>base: main</b>, <b>compare: your branch</b>. Fill the title and description.</div></div>
+          <div class="ins"><div class="ins-n">3</div><div class="ins-body">In the description, include the closing keyword — this is what triggers the auto-close:<br><br>
+            <code>Closes TES-8</code> &nbsp;or&nbsp; <code>Fixes TES-8</code> &nbsp;or&nbsp; <code>Resolves TES-8</code>
+          </div></div>
+          <div class="ins"><div class="ins-n">4</div><div class="ins-body">Click <b>Create pull request</b>. Two things happen automatically:<br>
+            • <b>PR Guard</b> checks for the Linear reference and posts a confirmation comment<br>
+            • <b>Linear</b> auto-moves the ticket from Confirmed → <b>In Review</b>
+          </div></div>
+          <div class="callout warn">
+            <div class="callout-icon">⚠️</div>
+            <div class="callout-body"><b>Forgot Closes TES-XX?</b> PR Guard will post a warning comment. Edit the PR description to add it — the check updates automatically. Without it, the ticket won't auto-close on merge.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-head" onclick="toggle(this)">
+          <div class="step-num" style="background:var(--lime-ll);color:var(--lime-d);border:1px solid var(--lime)">04</div>
+          <div class="step-meta">
+            <div class="step-role" style="color:var(--lime-d)">PM / Dev · Review</div>
+            <div class="step-title">PR reviewed and approved</div>
+            <div class="step-sub">Someone reviews the diff before it goes live</div>
+          </div>
+          <div class="step-chevron">▼</div>
+        </div>
+        <div class="step-body">
+          <div class="ins"><div class="ins-n">1</div><div class="ins-body">Reviewer looks at the diff — what changed, what was added or removed. Can comment on specific lines.</div></div>
+          <div class="ins"><div class="ins-n">2</div><div class="ins-body">If changes needed, push more commits to the same branch. PR updates automatically — don't close and reopen.</div></div>
+          <div class="ins"><div class="ins-n">3</div><div class="ins-body">Reviewer approves. Dev or reviewer clicks Merge.</div></div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-head" onclick="toggle(this)">
+          <div class="step-num" style="background:var(--green-l);color:var(--green);border:1px solid var(--green-b)">✓</div>
+          <div class="step-meta">
+            <div class="step-role" style="color:var(--green)">Automatic</div>
+            <div class="step-title">Merge → ticket closes itself <span class="auto-chip">● Auto</span></div>
+            <div class="step-sub">You don't touch Linear — the merge does it</div>
+          </div>
+          <div class="step-chevron">▼</div>
+        </div>
+        <div class="step-body">
+          <div class="ins"><div class="ins-n">1</div><div class="ins-body">Click <b>Merge pull request</b> → <b>Confirm merge</b> on GitHub.</div></div>
+          <div class="ins"><div class="ins-n">2</div><div class="ins-body">Within 5–10 seconds, Linear automatically moves the ticket to <b>Done</b>.</div></div>
+          <div class="ins"><div class="ins-n">3</div><div class="ins-body">Delete the branch — it's done its job:<br><code>git push origin --delete tes-8-checkout-link-fires-before-freebie-saves</code></div></div>
+          <div class="callout ok">
+            <div class="callout-icon">✅</div>
+            <div class="callout-body"><b>Tested and confirmed:</b> The PR merge → Linear auto-close cycle works. TES-5 moved to Done within 10 seconds of merging.</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-label">Git quick reference</div>
+    <table class="tbl">
+      <thead><tr><th>Command</th><th>What it does</th><th>When</th></tr></thead>
+      <tbody>
+        <tr><td><code>git checkout main</code></td><td>Switch to main branch</td><td>Before creating any new branch</td></tr>
+        <tr><td><code>git pull origin main</code></td><td>Get latest changes</td><td>Every time before branching</td></tr>
+        <tr><td><code>git checkout -b tes-XX-name</code></td><td>Create and switch to new branch</td><td>When starting a ticket</td></tr>
+        <tr><td><code>git add .</code></td><td>Stage all changes</td><td>Before every commit</td></tr>
+        <tr><td><code>git commit -m "message"</code></td><td>Save a snapshot</td><td>Each logical unit of work</td></tr>
+        <tr><td><code>git push -u origin branch</code></td><td>Upload branch to GitHub</td><td>First push on a new branch</td></tr>
+        <tr><td><code>git push</code></td><td>Upload subsequent commits</td><td>After the first push</td></tr>
+        <tr><td><code>git stash</code> / <code>git stash pop</code></td><td>Shelve and restore uncommitted changes</td><td>When switching branches mid-work</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+</div>
+
+<!-- ═══ RULES ═══ -->
+<div id="tab-rules" class="panel">
+<div class="page">
+  <div class="hero">
+    <div class="hero-tag">StackBack · Rules & Safeguards</div>
+    <h1>The rules that<br><em>keep it working</em></h1>
+    <p>The automation is only as good as the habits around it. These are the things that break the flow when they go wrong.</p>
+  </div>
+
+  <div class="sec">
+    <div class="sec-label">5 rules to never break</div>
+    <ul class="rules">
+      <li><span class="ri">❌</span><div><b>Never manually close a ticket</b> — the PR merge does it. Manual closures break code traceability and audit history.</div></li>
+      <li><span class="ri">❌</span><div><b>Never raise a ticket without using a GitHub template</b> — blank issues skip the label automation. The ticket lands in Linear with no labels and can't be tracked or filtered.</div></li>
+      <li><span class="ri">❌</span><div><b>Never open a PR without <code>Closes TES-XX</code></b> — the auto-close won't fire and the ticket stays open forever. PR Guard will warn you if you forget.</div></li>
+      <li><span class="ri">❌</span><div><b>Never put feature work in the QA team</b> — new features belong in a project (Try Before You Buy, WhatsApp Integration, or Master Admin). The QA team is bugs only.</div></li>
+      <li><span class="ri">❌</span><div><b>Never leave Triage tickets unactioned for more than 7 days</b> — the Triage Hygiene Bot runs daily and will post a comment on stale tickets. Act on them before it fires.</div></li>
+      <li><span class="ri">✅</span><div><b>Always assign the ticket to the dev working on it</b> — not the person who filed it. Set Assignee when you move to Confirmed. This keeps accountability clear.</div></li>
+    </ul>
+  </div>
+
+  <div class="sec">
+    <div class="sec-label">Automated safeguards</div>
+    <table class="tbl">
+      <thead><tr><th>Safeguard</th><th>What it does</th><th>When it fires</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><b>GitHub Issue Templates</b></td>
+          <td>Forces structured input — dropdowns for error type, surface, severity. Blank issues disabled.</td>
+          <td>Every new GitHub issue</td>
+        </tr>
+        <tr>
+          <td><b>Label Sync Action</b></td>
+          <td>Reads form fields → applies surface + error type + severity labels → moves ticket to Triage in Linear.</td>
+          <td>Every new GitHub issue</td>
+        </tr>
+        <tr>
+          <td><b>PR Guard</b></td>
+          <td>Checks PR description for <code>Closes/Fixes/Resolves TES-XX</code>. Posts warning if missing, confirmation if present.</td>
+          <td>Every PR open or edit</td>
+        </tr>
+        <tr>
+          <td><b>Triage Hygiene Bot</b></td>
+          <td>Checks for tickets in Triage > 7 days or missing required labels. Posts a comment on the offending ticket.</td>
+          <td>Every weekday at 9am</td>
+        </tr>
+        <tr>
+          <td><b>Linear ↔ GitHub Auto-transitions</b></td>
+          <td>PR opened → In Review. PR merged → Done. No manual Linear updates needed.</td>
+          <td>PR events</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="sec">
+    <div class="sec-label">Active projects — feature work only</div>
+    <table class="tbl">
+      <thead><tr><th>Project</th><th>What it covers</th><th>Status</th></tr></thead>
+      <tbody>
+        <tr><td>Try Before You Buy</td><td>INT-03 — TBYB page and widget</td><td><span class="badge b-blue">In Dev</span></td></tr>
+        <tr><td>WhatsApp Integration</td><td>PT-01 — Wati + Interakt</td><td><span class="badge b-orange">Active</span></td></tr>
+        <tr><td>Master Admin</td><td>INT-01 — Admin notification route</td><td><span class="badge b-grey">In Review</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+</div>
+
+<script>
+function show(id, btn) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('on'));
+  document.querySelectorAll('.nav-tab').forEach(b => b.classList.remove('on'));
+  document.getElementById('tab-' + id).classList.add('on');
+  btn.classList.add('on');
+}
+function toggle(head) {
+  head.closest('.step').classList.toggle('open');
+}
+</script>
+</body>
+</html>
